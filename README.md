@@ -31,7 +31,7 @@ simple:
 'use strict';
 
 var Redis = require('ioredis');
-var ratelimit = require('..')({
+var ratelimit = require('ioredis-ratelimit')({
   client: new Redis(),
   key: 'limiter',
   limit: 3,
@@ -51,7 +51,7 @@ Express:
 
 var app = require('express')();
 var Redis = require('ioredis');
-var ratelimit = require('..')({
+var ratelimit = require('ioredis-ratelimit')({
   client: new Redis(),
   key: function (req) {
     return 'limiter:' + req.user._id;
