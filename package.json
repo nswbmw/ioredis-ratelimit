@@ -1,0 +1,22 @@
+{
+  "name": "ioredis-ratelimit",
+  "description": "Generic ratelimit tool on top of ioredis.",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node test"
+  },
+  "keywords": [
+    "ratelimit",
+    "ratelimiter",
+    "redis"
+  ],
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nswbmw/ioredis-ratelimit"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "ioredis": "^1.15.1"
+  }
+}
