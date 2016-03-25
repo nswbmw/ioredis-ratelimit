@@ -21,6 +21,7 @@ opts:
 - client: {Object} client of [ioredis](https://github.com/luin/ioredis).
 - limit: {Number} concurrent in duration milliscond, default `1`.
 - duration: {Number} duration in milliscond, default `1000`.
+- ttl: {Number} expire in milliscond, must greater than or equal to `.duration`, default `86400000`.
 - key: {String|Function} ratelimiter's key.
 
 ### Examples
@@ -35,7 +36,8 @@ var ratelimit = require('ioredis-ratelimit')({
   client: new Redis(),
   key: 'limiter',
   limit: 3,
-  duration: 1000
+  duration: 1000,
+  ttl: 86400000 // one day
 });
 
 ratelimit().then(console.log).catch(console.error);// { total: 3, remaining: 2 }
@@ -57,7 +59,8 @@ var ratelimit = require('ioredis-ratelimit')({
     return 'limiter:' + req.user._id;
   },
   limit: 1,
-  duration: 1000
+  duration: 1000,
+  ttl: 86400000 // one day
 });
 
 ...

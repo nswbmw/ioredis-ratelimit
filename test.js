@@ -6,7 +6,8 @@ var ratelimit = require('./')({
   client: new Redis(),
   key: 'limiter',
   limit: 3,
-  duration: 1000
+  duration: 1000,
+  ttl: 86400000
 });
 
 ratelimit().then(console.log).catch(console.error);
