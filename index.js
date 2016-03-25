@@ -20,7 +20,7 @@ module.exports = function (opts) {
     var max = Date.now();
     var min = max - duration;
     return client
-      .multi()
+      .pipeline()
       .zadd(redisKey, max, Math.random())
       .pexpire(redisKey, ttl)
       .zcount(redisKey, min, max)
