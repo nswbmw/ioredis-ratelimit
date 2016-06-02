@@ -14,6 +14,7 @@ ratelimit().then(console.log).catch(console.error);
 ratelimit().then(console.log).catch(console.error);
 ratelimit().then(console.log).catch(console.error);
 ratelimit().then(console.log).catch(function (e) {
+  console.log(e);
   assert.equal('Exceeded the limit', e.message);
 });
 
@@ -22,6 +23,7 @@ setTimeout(function () {
   ratelimit().then(console.log).catch(console.error);
   ratelimit().then(console.log).catch(console.error);
   ratelimit().then(console.log).catch(function (e) {
+    console.log(e);
     assert.equal('Exceeded the limit', e.message);
     process.exit();
   });

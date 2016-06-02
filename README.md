@@ -23,6 +23,7 @@ opts:
 - duration: {Number} duration in milliscond, default `1000`.
 - ttl: {Number} expire in milliscond, must greater than or equal to `.duration`, default `86400000`.
 - key: {String|Function} ratelimiter's key.
+- error: {Error} throw when reach limit.
 
 ### Examples
 
