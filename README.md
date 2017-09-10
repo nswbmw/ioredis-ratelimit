@@ -10,7 +10,7 @@ $ npm i ioredis-ratelimit --save
 
 ### Usage
 
-```
+```javascript
 var ratelimit = require('ioredis-ratelimit')(opts);
 
 ratelimit(id).then(...).catch(...);
@@ -20,8 +20,9 @@ opts:
 
 - client: {Object} client of [ioredis](https://github.com/luin/ioredis).
 - limit: {Number} concurrent in duration milliscond, default `1`.
-- duration: {Number} duration in milliscond, default `1000`.
-- ttl: {Number} expire in milliscond, must greater than or equal to `.duration`, default `86400000`.
+- duration: {Number} duration in millisecond, default `1000`.
+- difference: {Number} duration between each operation in millisecond, default `0`.
+- ttl: {Number} expire in millisecond, must greater than or equal to `.duration`, default `86400000`.
 - key: {String|Function} ratelimiter's key.
 - error: {Error} throw when reach limit.
 
@@ -29,7 +30,7 @@ opts:
 
 simple:
 
-```
+```javascript
 'use strict';
 
 var Redis = require('ioredis');
@@ -41,15 +42,15 @@ var ratelimit = require('ioredis-ratelimit')({
   ttl: 86400000 // one day
 });
 
-ratelimit().then(console.log).catch(console.error);// { total: 3, remaining: 2 }
-ratelimit().then(console.log).catch(console.error);// { total: 3, remaining: 1 }
-ratelimit().then(console.log).catch(console.error);// { total: 3, remaining: 0 }
-ratelimit().then(console.log).catch(console.error);// [Error: Exceeded the limit]
+ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 2 }
+ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 1 }
+ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 0 }
+ratelimit().then(console.log).catch(console.error); // [Error: Exceeded the limit]
 ```
 
 Express:
 
-```
+```javascript
 'use strict';
 
 var app = require('express')();
@@ -64,7 +65,7 @@ var ratelimit = require('ioredis-ratelimit')({
   ttl: 86400000 // one day
 });
 
-...
+// ...
 
 app.use(function (req, res, next) {
   ratelimit(req)
@@ -76,7 +77,7 @@ app.use(function (req, res, next) {
 
 app.get('/', function () {});
 
-...
+// ...
 ```
 
 ### Test
