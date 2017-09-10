@@ -17,6 +17,8 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "co": "^4.6.0",
+    "delay": "^2.0.0",
     "ioredis": "^1.15.1"
   }
 }
