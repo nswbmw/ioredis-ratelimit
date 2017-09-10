@@ -3,6 +3,7 @@
 var assert = require('assert');
 
 module.exports = function (opts) {
+  opts = opts || {};
   var client = opts.client;
   var key = opts.key;
   var limit = opts.limit || 1;
