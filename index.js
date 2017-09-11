@@ -57,7 +57,7 @@ module.exports = function (opts) {
           return client
             .multi()
             .zremrangebyscore(redisKey, '-inf', min)  // remove expired ones
-            .zrem(key, member) // remove the one just inserted
+            .zrem(redisKey, member) // remove the one just inserted
             .exec()
             .then(function() {
               return Promise.reject(error);
@@ -67,7 +67,6 @@ module.exports = function (opts) {
         return {
           total: limit,
           remaining: limit - remaining,
-          next: difference,
         };
       });
   };
