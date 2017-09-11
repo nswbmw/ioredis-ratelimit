@@ -65,6 +65,31 @@ describe('basic func', function () {
     }).catch(done);
   });
 
+  it('should get() return amount of actions being taken', function (done) {
+    this.slow(500);
+    this.timeout(3000);
+
+    co(function* () {
+      for (var i = 1; i <= 3; ++i) {
+        yield limiter().then(function (actual) {
+          assert.deepEqual(actual, { total: i, acknowledged: 1, remaining: LIMIT - i });
+        });
+      }
+
+      // the current capacity should be 3
+      assert.deepEqual(yield limiter.get(), { total: 3, remaining: LIMIT - 3 });
+
+      yield limiter().then(function (actual) {
+        assert.deepEqual(actual, { total: 4, acknowledged: 1, remaining: LIMIT - 4 });
+      });
+
+      // the current capacity should be 4
+      assert.deepEqual(yield limiter.get(), { total: 4, remaining: LIMIT - 4 });
+
+      done();
+    }).catch(done);
+  });
+
   it('should the capacity restored when wait for an enough time', function (done) {
     this.slow(1000);
     this.timeout(3000);

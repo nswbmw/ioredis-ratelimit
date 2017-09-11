@@ -49,12 +49,12 @@ module.exports = function (opts) {
     return Promise.resolve(addedMembers.length);
   }
 
-  return function Limiter() {
+  function limiter() {
     var redisKey = ('string' === typeof key) ? key : key.call(null, arguments[0]);
     var times = (('string' === typeof key) ? arguments[0] : arguments[1]) || 1;
 
     assert('string' === typeof redisKey, 'key should be a string or a function that returns string');
-    assert(('number' === typeof times) && (times > 0), 'times should be a positive number');
+    assert(('number' === typeof times) && (times > 0), 'times should be a positive number or 0');
 
     var max = Date.now();
     var min = max - duration;
@@ -91,8 +91,8 @@ module.exports = function (opts) {
         var original = res[2][1] - members.length;
         return runStrategy(redisKey, original, min, members)
           .then(function (added) {
-            const total = original + added;
-            const remaining = limit - total;
+            var total = original + added;
+            var remaining = limit - total;
             return {
               total: total,
               acknowledged: added,
@@ -101,4 +101,35 @@ module.exports = function (opts) {
           });
       });
   };
+
+  limiter.get = function() {
+    var redisKey = ('string' === typeof key) ? key : key.call(null, arguments[0]);
+
+    assert('string' === typeof redisKey, 'key should be a string or a function that returns string');
+
+    var max = Date.now();
+    var min = max - duration;
+
+    return client
+      .multi()
+      .zremrangebyscore(redisKey, '-inf', min)  // remove expired ones
+      .zcount(redisKey, min, max)
+      .exec()
+      .then(function (res) {
+        for (var i = 0; i < res.length; ++i) {
+          if (res[i][0]) {
+            return Promise.reject(res[i][0]);
+          }
+        }
+
+        var total = res[1][1];
+        var remaining = limit - total;
+        return Promise.resolve({
+          total: total,
+          remaining: remaining > 0 ? remaining : 0,
+        });
+      });
+  }
+
+  return limiter;
 };

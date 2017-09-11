@@ -23,6 +23,8 @@ ratelimit().then(...).catch(...); // when key is string
 ratelimit(id).then(...).catch(...); // when key is function
 ratelimit(id, numActions).then(...).catch(...); // when key is function and batch actions are requested
 ratelimit(numActions).then(...).catch(...); // when key is string
+
+ratelimit.get().then(...); // return current size
 ```
 
 ### Options
@@ -57,6 +59,8 @@ ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 2 
 ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 1 }
 ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 0 }
 ratelimit().then(console.log).catch(console.error); // [Error: Exceeded the limit]
+
+ratelimit.get().then(console.log) // { total: 3, remaining: 0 }
 ```
 
 Express:
