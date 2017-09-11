@@ -43,6 +43,15 @@ module.exports = function (opts) {
             return Promise.reject(res[i][0]);
           }
         }
+
+        if (res[3] && res[3][1] > 1) {
+          return client
+            .zrem(redisKey, member) // remove the one just inserted
+            .then(function() {
+              return Promise.reject(error);
+            })
+        }
+
         var remaining = res[2][1];
         if (remaining > limit) {
           return client
@@ -50,14 +59,6 @@ module.exports = function (opts) {
             .zremrangebyscore(redisKey, '-inf', min)  // remove expired ones
             .zrem(key, member) // remove the one just inserted
             .exec()
-            .then(function() {
-              return Promise.reject(error);
-            })
-        }
-
-        if (res[3] && res[3][1] > 1) {
-          return client
-            .zrem(key, member) // remove the one just inserted
             .then(function() {
               return Promise.reject(error);
             })
