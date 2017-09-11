@@ -32,8 +32,8 @@ module.exports = function (opts) {
   }
 
   // return number of items being added
-  function runStrategy(redisKey, current, min, addedMembers) {
-    var original = current - addedMembers.length;
+  function runStrategy(redisKey, original, min, addedMembers) {
+    var current = original + addedMembers.length;
     if (original >= limit || (mode === 'binary' && current > limit)) {
       return removeItems(redisKey, min, addedMembers)
         .then(function () {
@@ -85,15 +85,16 @@ module.exports = function (opts) {
             .zrem(redisKey, members) // remove items just inserted
             .then(function() {
               return Promise.reject(error);
-            })
+            });
         }
 
-        var current = res[2][1];
-        return runStrategy(redisKey, current, min, members)
+        var original = res[2][1] - members.length;
+        return runStrategy(redisKey, original, min, members)
           .then(function (added) {
-            const remaining = limit - current;
+            const total = original + added;
+            const remaining = limit - total;
             return {
-              total: current,
+              total: total,
               acknowledged: added,
               remaining: remaining > 0 ? remaining : 0,
             };
