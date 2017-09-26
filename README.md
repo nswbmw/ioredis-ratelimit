@@ -19,7 +19,7 @@ ratelimit(id).then(...).catch(...);
 opts:
 
 - client: {Object} client of [ioredis](https://github.com/luin/ioredis).
-- limit: {Number} concurrent in duration milliscond, default `1`.
+- limit: {Number} max amount of calls in duration, default `1`.
 - duration: {Number} duration in millisecond, default `1000`.
 - difference: {Number} duration between each operation in millisecond, default `0`.
 - ttl: {Number} expire in millisecond, must greater than or equal to `.duration`, default `86400000`.

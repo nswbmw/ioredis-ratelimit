@@ -43,21 +43,22 @@ module.exports = function (opts) {
             return Promise.reject(res[i][0]);
           }
         }
-        var remaining = res[2][1];
-        if (remaining > limit) {
+
+        if (res[3] && res[3][1] > 1) {
           return client
-            .multi()
-            .zremrangebyscore(redisKey, '-inf', min)  // remove expired ones
-            .zrem(key, member) // remove the one just inserted
-            .exec()
+            .zrem(redisKey, member) // remove the one just inserted
             .then(function() {
               return Promise.reject(error);
             })
         }
 
-        if (res[3] && res[3][1] > 1) {
+        var remaining = res[2][1];
+        if (remaining > limit) {
           return client
-            .zrem(key, member) // remove the one just inserted
+            .multi()
+            .zremrangebyscore(redisKey, '-inf', min)  // remove expired ones
+            .zrem(redisKey, member) // remove the one just inserted
+            .exec()
             .then(function() {
               return Promise.reject(error);
             })
@@ -66,7 +67,6 @@ module.exports = function (opts) {
         return {
           total: limit,
           remaining: limit - remaining,
-          next: difference,
         };
       });
   };
