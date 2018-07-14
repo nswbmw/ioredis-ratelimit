@@ -13,6 +13,8 @@ module.exports = function (opts) {
   var ttl = opts.ttl || 86400000;
   var mode = opts.mode || 'binary';
   var error = opts.error || new Error('Exceeded the limit');
+  error.status = error.status || 429
+  error.statusCode = error.statusCode || 429
 
   assert(client, '.client required');
   assert(key, '.key required');

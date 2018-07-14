@@ -58,7 +58,7 @@ var ratelimit = require('ioredis-ratelimit')({
 ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 2 }
 ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 1 }
 ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 0 }
-ratelimit().then(console.log).catch(console.error); // [Error: Exceeded the limit]
+ratelimit().then(console.log).catch(console.error); // 429 - [Error: Exceeded the limit]
 
 ratelimit.get().then(console.log) // { total: 3, remaining: 0 }
 ```
@@ -121,7 +121,7 @@ var ratelimit = require('ioredis-ratelimit')({
 
 ratelimit(2).then(console.log).catch(console.error); // { total: 2, acknowledged: 2, remaining: 3 }
 ratelimit(2).then(console.log).catch(console.error); // { total: 4, acknowledged: 2, remaining: 1 }
-ratelimit(2).then(console.log).catch(console.error); // [Error: Exceeded the limit]
+ratelimit(2).then(console.log).catch(console.error); // 429 - [Error: Exceeded the limit]
 ```
 
 ### N-ary
@@ -142,7 +142,7 @@ var ratelimit = require('ioredis-ratelimit')({
 ratelimit(2).then(console.log).catch(console.error); // { total: 2, acknowledged: 2, remaining: 3 }
 ratelimit(2).then(console.log).catch(console.error); // { total: 4, acknowledged: 2, remaining: 1 }
 ratelimit(2).then(console.log).catch(console.error); // { total: 5, acknowledged: 1, remaining: 0 }
-ratelimit(2).then(console.log).catch(console.error); // [Error: Exceeded the limit]
+ratelimit(2).then(console.log).catch(console.error); // 429 - [Error: Exceeded the limit]
 ```
 
 ### Uniform
@@ -163,7 +163,7 @@ var ratelimit = require('ioredis-ratelimit')({
 ratelimit(2).then(console.log).catch(console.error); // { total: 2, acknowledged: 2, remaining: 3 }
 ratelimit(2).then(console.log).catch(console.error); // { total: 4, acknowledged: 2, remaining: 1 }
 ratelimit(2).then(console.log).catch(console.error); // { total: 6, acknowledged: 2, remaining: 0 }
-ratelimit(2).then(console.log).catch(console.error); // [Error: Exceeded the limit]
+ratelimit(2).then(console.log).catch(console.error); // 429 - [Error: Exceeded the limit]
 ```
 
 ## Test
