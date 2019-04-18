@@ -43,8 +43,6 @@ ratelimit.get().then(...); // return current size
 simple:
 
 ```javascript
-'use strict';
-
 var Redis = require('ioredis');
 var ratelimit = require('ioredis-ratelimit')({
   client: new Redis(),
@@ -60,7 +58,7 @@ ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 1 
 ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 0 }
 ratelimit().then(console.log).catch(console.error); // 429 - [Error: Exceeded the limit]
 
-ratelimit.get().then(console.log) // { total: 3, remaining: 0 }
+ratelimit.get().then(console.log) // { total: 3, remaining: 0, retryAfterMS: 1000 }
 ```
 
 Express:

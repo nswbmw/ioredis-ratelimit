@@ -111,11 +111,13 @@ module.exports = function (opts) {
 
     var max = Date.now();
     var min = max - duration;
+    var lastAvailableIndex = Math.max(0, limit - 2)
 
     return client
       .multi()
       .zremrangebyscore(redisKey, '-inf', min)  // remove expired ones
       .zcount(redisKey, min, max)
+      .zrevrange(redisKey, lastAvailableIndex, lastAvailableIndex, 'WITHSCORES')
       .exec()
       .then(function (res) {
         for (var i = 0; i < res.length; ++i) {
@@ -129,6 +131,7 @@ module.exports = function (opts) {
         return Promise.resolve({
           total: total,
           remaining: remaining > 0 ? remaining : 0,
+          retryAfterMS: remaining > 0 ? 0 : (+res[2][1][1] + duration - max)
         });
       });
   }

@@ -16,7 +16,7 @@ describe('basic func', function () {
     client: client,
     key: KEY,
     limit: LIMIT,
-    duration: 300,
+    duration: 1000,
     ttl: 86400000,
     mode: 'binary',
     error
@@ -45,7 +45,7 @@ describe('basic func', function () {
   });
 
   it('should throw error when limit reached', function (done) {
-    this.slow(500);
+    this.slow(3000);
     this.timeout(3000);
 
     co(function* () {
@@ -66,32 +66,48 @@ describe('basic func', function () {
   });
 
   it('should get() return amount of actions being taken', function (done) {
-    this.slow(500);
+    this.slow(3000);
     this.timeout(3000);
 
     co(function* () {
       for (var i = 1; i <= 3; ++i) {
+        // delay between 2 and 3
+        if (i === 3) {
+          yield delay(100)
+        }
         yield limiter().then(function (actual) {
           assert.deepEqual(actual, { total: i, acknowledged: 1, remaining: LIMIT - i });
         });
       }
 
       // the current capacity should be 3
-      assert.deepEqual(yield limiter.get(), { total: 3, remaining: LIMIT - 3 });
+      assert.deepEqual(yield limiter.get(), { total: 3, remaining: LIMIT - 3, retryAfterMS: 0 });
 
       yield limiter().then(function (actual) {
         assert.deepEqual(actual, { total: 4, acknowledged: 1, remaining: LIMIT - 4 });
       });
 
       // the current capacity should be 4
-      assert.deepEqual(yield limiter.get(), { total: 4, remaining: LIMIT - 4 });
+      assert.deepEqual(yield limiter.get(), { total: 4, remaining: LIMIT - 4, retryAfterMS: 0 });
+
+      for (var i = 5; i <= LIMIT; ++i) {
+        yield limiter().then(function (actual) {
+          assert.deepEqual(actual, { total: i, acknowledged: 1, remaining: LIMIT - i });
+        });
+      }
+
+      yield limiter.get().then(function (actual) {
+        assert.deepEqual(actual.total, LIMIT);
+        assert.deepEqual(actual.remaining, 0);
+        assert.deepEqual(actual.retryAfterMS > 800, true);
+      });
 
       done();
     }).catch(done);
   });
 
   it('should the capacity restored when wait for an enough time', function (done) {
-    this.slow(1000);
+    this.slow(3000);
     this.timeout(3000);
 
     co(function* () {
@@ -100,20 +116,20 @@ describe('basic func', function () {
           assert.deepEqual(actual, { total: i, acknowledged: 1, remaining: LIMIT - i });
         });
       }
-      
+
       // the current capacity should be reached
       yield expectAmount(KEY, LIMIT);
-  
+
       // wait enough time for the next operations
-      yield delay(300);
-  
+      yield delay(1000);
+
       // fill up the bucket
       for (var i = 1; i <= LIMIT; ++i) {
-        yield limiter().then(function (actual) { 
+        yield limiter().then(function (actual) {
           assert.deepEqual(actual, { total: i, acknowledged: 1, remaining: LIMIT - i });
         });
       }
-  
+
       // the current capacity should be reached
       yield expectAmount(KEY, LIMIT);
 
