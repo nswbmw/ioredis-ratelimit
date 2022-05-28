@@ -65,6 +65,7 @@ module.exports = function (opts) {
 
     var redisCommand = client
       .multi()
+      .zremrangebyscore(redisKey, '-inf', `(${min}`) // cleanup anything expired (older than min)
       .zadd(redisKey, items)
       .pexpire(redisKey, ttl)
       .zcount(redisKey, min, max);
@@ -82,7 +83,7 @@ module.exports = function (opts) {
           }
         }
 
-        if (res[3] && res[3][1] > members.length) {
+        if (res[4] && res[4][1] > members.length) {
           return client
             .zrem(redisKey, members) // remove items just inserted
             .then(function() {
@@ -90,7 +91,7 @@ module.exports = function (opts) {
             });
         }
 
-        var original = res[2][1] - members.length;
+        var original = res[3][1] - members.length;
         return runStrategy(redisKey, original, min, members)
           .then(function (added) {
             var total = original + added;
