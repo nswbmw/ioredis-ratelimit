@@ -17,7 +17,6 @@ describe('difference func', function () {
     key: KEY,
     limit: LIMIT,
     duration: 300000,
-    ttl: 86400000,
     difference: 300,
     mode: 'binary',
     error

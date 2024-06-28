@@ -15,7 +15,6 @@ describe('key is function', function () {
     client: client,
     limit: LIMIT,
     duration: 3000,
-    ttl: 86400000,
     mode: 'binary',
     key: function(obj) { return 'ioredis-ratelimit:test:' + obj.id },
     error

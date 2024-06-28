@@ -17,7 +17,6 @@ describe('binary mode', function () {
     key: KEY,
     limit: LIMIT,
     duration: 3000,
-    ttl: 86400000,
     mode: 'binary',
     error
   });

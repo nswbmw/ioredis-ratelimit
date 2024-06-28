@@ -17,7 +17,6 @@ describe('nary mode', function () {
     key: KEY,
     limit: LIMIT,
     duration: 300,
-    ttl: 86400000,
     mode: 'nary',
     error
   });

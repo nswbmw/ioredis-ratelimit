@@ -5,7 +5,6 @@ var ratelimit = require('./')({
   limit: 3,
   duration: 1000,
   difference: 0, // allow no interval between requests
-  ttl: 86400000 // one day
 });
 
 ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 2 }

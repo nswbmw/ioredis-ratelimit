@@ -17,7 +17,6 @@ describe('basic func', function () {
     key: KEY,
     limit: LIMIT,
     duration: 1000,
-    ttl: 86400000,
     mode: 'binary',
     error
   });

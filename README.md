@@ -33,7 +33,6 @@ ratelimit.get().then(...); // return current size
 - limit: {Number} max amount of calls in duration, default `1`.
 - duration: {Number} duration in millisecond, default `1000`.
 - difference: {Number} duration between each operation in millisecond, default `0`.
-- ttl: {Number} expire in millisecond, must greater than or equal to `.duration`, default `86400000`.
 - key: {String|Function} ratelimiter's key.
 - mode: {String} `binary`, `nary`, and `uniform`, default `binary`.
 - error: {Error} throw when reach limit.
@@ -50,7 +49,6 @@ var ratelimit = require('ioredis-ratelimit')({
   limit: 3,
   duration: 1000,
   difference: 0, // allow no interval between requests
-  ttl: 86400000 // one day
 });
 
 ratelimit().then(console.log).catch(console.error); // { total: 3, remaining: 2 }
@@ -80,9 +78,6 @@ var ratelimit = require('ioredis-ratelimit')({
 
   // there should be at least 10ms interval between requests 
   difference: 10,
-
-  // the redis key will last for 1 day
-  ttl: 86400000
 });
 
 // ...
@@ -112,7 +107,6 @@ var ratelimit = require('ioredis-ratelimit')({
   key: 'limiter',
   limit: 5,
   duration: 3000,
-  ttl: 86400000,
   mode: 'binary',
   error: new Error('Exceeded the limit')
 });
@@ -132,7 +126,6 @@ var ratelimit = require('ioredis-ratelimit')({
   key: 'limiter',
   limit: 5,
   duration: 3000,
-  ttl: 86400000,
   mode: 'nary',
   error: new Error('Exceeded the limit')
 });
@@ -153,8 +146,7 @@ var ratelimit = require('ioredis-ratelimit')({
   key: 'limiter',
   limit: 5,
   duration: 3000,
-  ttl: 86400000,
-  mode: 'nary',
+  mode: 'uniform',
   error: new Error('Exceeded the limit')
 });
 

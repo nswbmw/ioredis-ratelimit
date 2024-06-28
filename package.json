@@ -1,7 +1,7 @@
 {
   "name": "ioredis-ratelimit",
   "description": "Generic ratelimit tool on top of ioredis.",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "scripts": {
     "test": "mocha"
   },
@@ -19,7 +19,7 @@
   "devDependencies": {
     "co": "^4.6.0",
     "delay": "^5.0.0",
-    "ioredis": "^5.0.6",
-    "mocha": "^10.0.0"
+    "ioredis": "^5.4.1",
+    "mocha": "^10.5.2"
   }
 }
