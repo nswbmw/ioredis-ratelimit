@@ -1,25 +1,51 @@
 {
   "name": "ioredis-ratelimit",
-  "description": "Generic ratelimit tool on top of ioredis.",
-  "version": "2.3.0",
+  "description": "A generic Redis-backed rate limiting tool built on top of ioredis.",
+  "version": "3.0.0",
+  "main": "index.js",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./index.js",
+      "import": "./index.js",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "types",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "test": "mocha"
+    "lint": "eslint .",
+    "pretest": "redis-cli ping > /dev/null 2>&1 || (echo 'Error: Redis is not running. Please start Redis first.' && exit 1)",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "prepublishOnly": "npm run lint && npm run test",
+    "prepare": "husky"
+  },
+  "author": "nswbmw",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nswbmw/ioredis-ratelimit.git"
   },
   "keywords": [
     "ratelimit",
     "ratelimiter",
     "redis"
   ],
-  "dependencies": {},
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/nswbmw/ioredis-ratelimit"
-  },
-  "license": "MIT",
   "devDependencies": {
-    "co": "^4.6.0",
-    "delay": "^5.0.0",
-    "ioredis": "^5.4.1",
-    "mocha": "^10.5.2"
+    "@commitlint/cli": "20.1.0",
+    "@commitlint/config-conventional": "20.0.0",
+    "eslint": "9.39.1",
+    "globals": "16.5.0",
+    "husky": "9.1.7",
+    "ioredis": "5.8.2",
+    "jest": "30.2.0",
+    "neostandard": "0.12.2"
+  },
+  "peerDependencies": {
+    "ioredis": "^5.8.2"
   }
 }

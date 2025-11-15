@@ -1,141 +1,197 @@
-'use strict';
+const assert = require('assert')
 
-var assert = require('assert');
-var utils = require('./utils')
+/**
+ * @typedef {'binary' | 'nary' | 'uniform'} RateLimitMode
+ */
 
-module.exports = function (opts) {
-  opts = opts || {};
-  var client = opts.client;
-  var key = opts.key;
-  var limit = opts.limit || 1;
-  var duration = opts.duration || 1000;
-  var difference = opts.difference || 0;
-  var ttl = opts.ttl || duration || 86400000;
-  var mode = opts.mode || 'binary';
-  var error = opts.error || new Error('Exceeded the limit');
+/**
+ * @typedef {Object} RateLimitOptions
+ * @property {import('ioredis').Redis} client - ioredis client instance
+ * @property {string | function(any): string} key - Rate limiter key or key generator function
+ * @property {number} limit - Maximum number of requests allowed in the duration window
+ * @property {number} duration - Time window in milliseconds
+ * @property {number} [difference=0] - Minimum milliseconds between requests
+ * @property {number} [ttl] - Redis key TTL in milliseconds (defaults to duration)
+ * @property {RateLimitMode} [mode='binary'] - Rate limiting mode
+ * @property {Error} [error] - Error thrown when rate limit is exceeded
+ */
+
+/**
+ * @typedef {Object} RateLimitResult
+ * @property {number} total - Total number of requests in the current window
+ * @property {number} acknowledged - Number of requests acknowledged/accepted in this call
+ * @property {number} remaining - Number of remaining requests available
+ */
+
+/**
+ * @typedef {Object} RateLimitStatus
+ * @property {number} total - Total number of requests in the current window
+ * @property {number} remaining - Number of remaining requests available
+ * @property {number} retryAfterMS - Milliseconds to wait before retrying (0 if quota available)
+ */
+
+/**
+ * Create a rate limiter instance
+ * @param {RateLimitOptions} opts - Rate limiter configuration options
+ * @returns {function} Rate limiter function with attached `get` method.
+ * When `key` is a string, call as `(times?: number)`.
+ * When `key` is a function, call as `(id: string, times?: number)`.
+ * The returned function also exposes `fn.get(id?: string): Promise<RateLimitStatus>`.
+ */
+module.exports = function (opts = {}) {
+  const client = opts.client
+  const key = opts.key
+  const limit = opts.limit
+  const duration = opts.duration
+  const difference = opts.difference || 0
+  const ttl = opts.ttl || duration
+  const mode = opts.mode || 'binary'
+  const error = opts.error || new Error('Too Many Requests')
   error.status = error.status || 429
   error.statusCode = error.statusCode || 429
 
-  assert(client, '.client required');
-  assert(key, '.key required');
-  assert(('number' === typeof limit) && (limit > 0), '.limit must be a positive number');
-  assert(('number' === typeof duration) && (duration > 0), '.duration must be a positive number');
-  assert((('number' === typeof difference) && (difference >= 0)), '.difference must be a positive number or 0');
-  assert(('number' === typeof ttl) && (ttl > 0) && (ttl >= duration), '.ttl must be greater than or equal to .duration');
-  assert(mode === 'nary' || mode === 'binary' || mode === 'uniform', '.mode should be one of \'uniform\', \'binary\' and \'nary\'');
-  assert(error instanceof Error, '.error must be in Error type');
+  assert(client, '.client required')
+  assert(key, '.key required')
+  assert(typeof limit === 'number' && limit > 0, '.limit must be a positive number')
+  assert(typeof duration === 'number' && duration > 0, '.duration must be a positive number')
+  assert(typeof difference === 'number' && difference >= 0, '.difference must be a positive number or 0')
+  assert(typeof ttl === 'number' && ttl > 0 && ttl >= duration, '.ttl must be greater than or equal to .duration')
+  assert(['nary', 'binary', 'uniform'].includes(mode), '.mode should be one of \'uniform\', \'binary\' and \'nary\'')
+  assert(error instanceof Error, '.error must be in Error type')
 
-  function removeItems(redisKey, min, removeMembers) {
+  /**
+   * Remove expired items and specified members from Redis sorted set
+   * @private
+   * @param {string} redisKey - Redis key
+   * @param {number} min - Minimum timestamp for valid items
+   * @param {number[]} removeMembers - Members to remove
+   * @returns {Promise<void>} Promise that resolves when items are removed
+   */
+  function removeItems (redisKey, min, removeMembers) {
     return client
       .multi()
-      .zremrangebyscore(redisKey, '-inf', min)  // remove expired ones
-      .zrem(key, removeMembers) // remove the one just inserted
-      .exec();
+      .zremrangebyscore(redisKey, '-inf', min) // remove expired ones
+      .zrem(redisKey, removeMembers) // remove the one just inserted
+      .exec()
   }
 
-  // return number of items being added
-  function runStrategy(redisKey, original, min, addedMembers) {
-    var current = original + addedMembers.length;
+  /**
+   * Execute rate limiting strategy based on mode
+   * @private
+   * @param {string} redisKey - Redis key
+   * @param {number} original - Original count before adding new members
+   * @param {number} min - Minimum timestamp for valid items
+   * @param {number[]} addedMembers - Members that were added
+   * @returns {Promise<number>} Promise resolving to number of items being added
+   */
+  function runStrategy (redisKey, original, min, addedMembers) {
+    const current = original + addedMembers.length
     if (original >= limit || (mode === 'binary' && current > limit)) {
-      return removeItems(redisKey, min, addedMembers)
-        .then(function () {
-          return Promise.reject(error);
-        });
+      return removeItems(redisKey, min, addedMembers).then(() => Promise.reject(error))
     } else if (mode === 'nary' && current > limit) {
-      return removeItems(redisKey, min, addedMembers.slice(limit - current))
-        .then(function () {
-          return Promise.resolve(limit - original);
-        });
+      return removeItems(redisKey, min, addedMembers.slice(limit - current)).then(() => limit - original)
     }
 
-    return Promise.resolve(addedMembers.length);
+    return Promise.resolve(addedMembers.length)
   }
 
-  function limiter() {
-    var redisKey = ('string' === typeof key) ? key : key.call(null, arguments[0]);
-    var times = (('string' === typeof key) ? arguments[0] : arguments[1]) || 1;
+  /**
+   * Consume rate limit quota
+   * @param {any} [id] - Identifier when key is a function
+   * @param {number} [times=1] - Number of requests to consume
+   * @returns {Promise<RateLimitResult>} Promise resolving to rate limit result
+   */
+  function limiter () {
+    const redisKey = typeof key === 'string' ? key : key(arguments[0])
+    const times = (typeof key === 'string' ? arguments[0] : arguments[1]) || 1
 
-    assert('string' === typeof redisKey, 'key should be a string or a function that returns string');
-    assert(('number' === typeof times) && (times > 0), 'times should be a positive number or 0');
+    assert(typeof redisKey === 'string', 'key should be a string or a function that returns string')
+    assert(typeof times === 'number' && times > 0, 'times should be a positive number')
 
-    var max = Date.now();
-    var min = max - duration;
-    var members = utils.generateArrayOfRandomValues(times);
-    var items = utils.flatten(members.map(function (val) { return [max, val]; }));
+    const max = Date.now()
+    const min = max - duration
+    const members = Array.from({ length: times }, () => Math.random())
+    const items = members.flatMap(val => [max, val])
 
-    var redisCommand = client
+    let redisCommand = client
       .multi()
-      .zremrangebyscore(redisKey, '-inf', `(${min}`) // cleanup anything expired (older than min)
+      .zremrangebyscore(redisKey, '-inf', `(${min}`) // remove expired ones
       .zadd(redisKey, items)
       .pexpire(redisKey, ttl)
-      .zcount(redisKey, min, max);
+      .zcount(redisKey, min, max)
 
     if (Number.isFinite(difference) && difference > 0) {
-      redisCommand = redisCommand.zcount(redisKey, max - difference, max);
+      redisCommand = redisCommand.zcount(redisKey, max - difference, max)
     }
 
     return redisCommand
       .exec()
-      .then(function (res) {
-        for (var i = 0; i < res.length; ++i) {
+      .then(res => {
+        // Check for Redis errors
+        for (let i = 0; i < res.length; i++) {
           if (res[i][0]) {
-            return Promise.reject(res[i][0]);
+            return Promise.reject(res[i][0])
           }
         }
 
+        // Check difference constraint if enabled
         if (res[4] && res[4][1] > members.length) {
           return client
             .zrem(redisKey, members) // remove items just inserted
-            .then(function() {
-              return Promise.reject(error);
-            });
+            .then(() => Promise.reject(error))
         }
 
-        var original = res[3][1] - members.length;
+        const original = res[3][1] - members.length
         return runStrategy(redisKey, original, min, members)
-          .then(function (added) {
-            var total = original + added;
-            var remaining = limit - total;
+          .then(added => {
+            const total = original + added
+            const remaining = limit - total
             return {
-              total: total,
+              total,
               acknowledged: added,
-              remaining: remaining > 0 ? remaining : 0,
-            };
-          });
-      });
-  };
+              remaining: remaining > 0 ? remaining : 0
+            }
+          })
+      })
+  }
 
-  limiter.get = function() {
-    var redisKey = ('string' === typeof key) ? key : key.call(null, arguments[0]);
+  /**
+   * Get current rate limit status without consuming quota
+   * @param {any} [id] - Identifier when key is a function
+   * @returns {Promise<RateLimitStatus>} Promise resolving to rate limit status
+   */
+  limiter.get = function () {
+    const redisKey = typeof key === 'string' ? key : key(arguments[0])
 
-    assert('string' === typeof redisKey, 'key should be a string or a function that returns string');
+    assert(typeof redisKey === 'string', 'key should be a string or a function that returns string')
 
-    var max = Date.now();
-    var min = max - duration;
-    var lastAvailableIndex = Math.max(0, limit - 2)
+    const max = Date.now()
+    const min = max - duration
+    const lastAvailableIndex = Math.max(0, limit - 2)
 
     return client
       .multi()
-      .zremrangebyscore(redisKey, '-inf', min)  // remove expired ones
+      .zremrangebyscore(redisKey, '-inf', `(${min}`) // remove expired ones
       .zcount(redisKey, min, max)
       .zrevrange(redisKey, lastAvailableIndex, lastAvailableIndex, 'WITHSCORES')
       .exec()
-      .then(function (res) {
-        for (var i = 0; i < res.length; ++i) {
+      .then(res => {
+        // Check for Redis errors
+        for (let i = 0; i < res.length; i++) {
           if (res[i][0]) {
-            return Promise.reject(res[i][0]);
+            return Promise.reject(res[i][0])
           }
         }
 
-        var total = res[1][1];
-        var remaining = limit - total;
-        return Promise.resolve({
-          total: total,
+        const total = res[1][1]
+        const remaining = limit - total
+        return {
+          total,
           remaining: remaining > 0 ? remaining : 0,
           retryAfterMS: remaining > 0 ? 0 : (+res[2][1][1] + duration - max)
-        });
-      });
+        }
+      })
   }
 
-  return limiter;
-};
+  return limiter
+}
