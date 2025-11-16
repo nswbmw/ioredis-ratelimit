@@ -20,8 +20,10 @@ $ npm i ioredis-ratelimit --save
 ## Quick Start
 
 ```js
-const Redis = require('ioredis')
-const ratelimit = require('ioredis-ratelimit')({
+import Redis from 'ioredis'
+import RateLimiter from 'ioredis-ratelimit'
+
+const ratelimiter = RateLimiter({
   client: new Redis(),
   key: 'my-rate-limiter',
   limit: 10,        // 10 requests
@@ -29,15 +31,15 @@ const ratelimit = require('ioredis-ratelimit')({
 })
 
 // Check rate limit
-await ratelimit()  // { total: 1, acknowledged: 1, remaining: 9 }
+await ratelimiter()  // { total: 1, acknowledged: 1, remaining: 9 }
 
 // Get current status
-await ratelimit.get()  // { total: 1, remaining: 9, retryAfterMS: 0 }
+await ratelimiter.get()  // { total: 1, remaining: 9, retryAfterMS: 0 }
 ```
 
 ## API
 
-### `ratelimit([id], [times])`
+### `ratelimiter([id], [times])`
 
 Consume rate limit quota.
 
@@ -45,7 +47,7 @@ Consume rate limit quota.
 - **`times`** (optional): Number of requests to consume (default: 1)
 - **Returns**: `Promise<{ total, acknowledged, remaining }>`
 
-### `ratelimit.get([id])`
+### `ratelimiter.get([id])`
 
 Get current rate limit status without consuming quota.
 
@@ -70,8 +72,10 @@ Get current rate limit status without consuming quota.
 ### Basic Usage
 
 ```js
-const Redis = require('ioredis')
-const ratelimit = require('ioredis-ratelimit')({
+import Redis from 'ioredis'
+import RateLimiter from 'ioredis-ratelimit'
+
+const ratelimiter = RateLimiter({
   client: new Redis(),
   key: 'limiter',
   limit: 3,
@@ -80,23 +84,25 @@ const ratelimit = require('ioredis-ratelimit')({
 })
 
 ;(async () => {
-  await ratelimit().then(console.log) // { total: 1, acknowledged: 1, remaining: 2 }
-  await ratelimit().then(console.log) // { total: 2, acknowledged: 1, remaining: 1 }
-  await ratelimit().then(console.log) // { total: 3, acknowledged: 1, remaining: 0 }
-  await ratelimit().then(console.log).catch(console.error) // 429 - Error: Too Many Requests
+  await ratelimiter().then(console.log) // { total: 1, acknowledged: 1, remaining: 2 }
+  await ratelimiter().then(console.log) // { total: 2, acknowledged: 1, remaining: 1 }
+  await ratelimiter().then(console.log) // { total: 3, acknowledged: 1, remaining: 0 }
+  await ratelimiter().then(console.log).catch(console.error) // 429 - Error: Too Many Requests
 
-  await ratelimit.get().then(console.log) // { total: 3, remaining: 0, retryAfterMS: 998 }
+  await ratelimiter.get().then(console.log) // { total: 3, remaining: 0, retryAfterMS: 999 }
 })().catch(console.error)
 ```
 
 ### Express Middleware
 
 ```js
-const express = require('express')
-const Redis = require('ioredis')
+import express from 'express'
+import Redis from 'ioredis'
+import RateLimiter from 'ioredis-ratelimit'
+
 const app = express()
 
-const ratelimit = require('ioredis-ratelimit')({
+const ratelimiter = RateLimiter({
   client: new Redis(),
   key: (req) => `limiter:${req.user.id}`,
   limit: 10,      // 10 requests
@@ -106,7 +112,7 @@ const ratelimit = require('ioredis-ratelimit')({
 
 app.use(async (req, res, next) => {
   try {
-    await ratelimit(req)
+    await ratelimiter(req)
     next()
   } catch (err) {
     res.status(429).json({ error: 'Too Many Requests' })
@@ -123,7 +129,7 @@ app.listen(3000)
 ### Batch Operations
 
 ```js
-const ratelimit = require('ioredis-ratelimit')({
+const ratelimiter = RateLimiter({
   client: new Redis(),
   key: 'batch-limiter',
   limit: 10,
@@ -131,27 +137,27 @@ const ratelimit = require('ioredis-ratelimit')({
 })
 
 // Consume 5 requests at once
-await ratelimit(5)  // { total: 5, acknowledged: 5, remaining: 5 }
+await ratelimiter(5)  // { total: 5, acknowledged: 5, remaining: 5 }
 ```
 
 ### Dynamic Keys (Per-User Limiting)
 
 ```js
-const ratelimit = require('ioredis-ratelimit')({
+const ratelimiter = RateLimiter({
   client: new Redis(),
   key: (userId) => `ratelimit:user:${userId}`,
   limit: 100,
   duration: 60000  // 100 requests per minute per user
 })
 
-await ratelimit('user123')  // Rate limit for user123
-await ratelimit('user456')  // Rate limit for user456 (separate bucket)
+await ratelimiter('user123')  // Rate limit for user123
+await ratelimiter('user456')  // Rate limit for user456 (separate bucket)
 ```
 
 ### Minimum Request Interval
 
 ```js
-const ratelimit = require('ioredis-ratelimit')({
+const ratelimiter = RateLimiter({
   client: new Redis(),
   key: 'api-calls',
   limit: 100,
@@ -159,8 +165,8 @@ const ratelimit = require('ioredis-ratelimit')({
   difference: 1000  // Minimum 1s between requests
 })
 
-await ratelimit()  // OK
-await ratelimit()  // Error: Too Many Requests (called too quickly)
+await ratelimiter()  // OK
+await ratelimiter()  // Error: Too Many Requests (called too quickly)
 ```
 
 ## Rate Limiting Modes
@@ -170,7 +176,7 @@ await ratelimit()  // Error: Too Many Requests (called too quickly)
 **All-or-nothing**: Either all requests are accepted or all are rejected.
 
 ```js
-const ratelimit = require('ioredis-ratelimit')({
+const ratelimiter = RateLimiter({
   client: new Redis(),
   key: 'limiter',
   limit: 5,
@@ -178,9 +184,9 @@ const ratelimit = require('ioredis-ratelimit')({
   mode: 'binary'
 })
 
-await ratelimit(2)  // { total: 2, acknowledged: 2, remaining: 3 }
-await ratelimit(2)  // { total: 4, acknowledged: 2, remaining: 1 }
-await ratelimit(2)  // Error: Too Many Requests (needs 2 but only 1 remaining)
+await ratelimiter(2)  // { total: 2, acknowledged: 2, remaining: 3 }
+await ratelimiter(2)  // { total: 4, acknowledged: 2, remaining: 1 }
+await ratelimiter(2)  // Error: Too Many Requests (needs 2 but only 1 remaining)
 ```
 
 **Use case**: Strict rate limiting where partial fulfillment is not acceptable.
@@ -190,7 +196,7 @@ await ratelimit(2)  // Error: Too Many Requests (needs 2 but only 1 remaining)
 **Partial acceptance**: Accepts as many requests as possible, up to the limit.
 
 ```js
-const ratelimit = require('ioredis-ratelimit')({
+const ratelimiter = RateLimiter({
   client: new Redis(),
   key: 'limiter',
   limit: 5,
@@ -198,10 +204,10 @@ const ratelimit = require('ioredis-ratelimit')({
   mode: 'nary'
 })
 
-await ratelimit(2)  // { total: 2, acknowledged: 2, remaining: 3 }
-await ratelimit(2)  // { total: 4, acknowledged: 2, remaining: 1 }
-await ratelimit(2)  // { total: 5, acknowledged: 1, remaining: 0 } ✅ Accepts 1 of 2
-await ratelimit(2)  // Error: Too Many Requests (bucket full)
+await ratelimiter(2)  // { total: 2, acknowledged: 2, remaining: 3 }
+await ratelimiter(2)  // { total: 4, acknowledged: 2, remaining: 1 }
+await ratelimiter(2)  // { total: 5, acknowledged: 1, remaining: 0 } ✅ Accepts 1 of 2
+await ratelimiter(2)  // Error: Too Many Requests (bucket full)
 ```
 
 **Use case**: Maximize throughput by accepting partial batches.
@@ -211,7 +217,7 @@ await ratelimit(2)  // Error: Too Many Requests (bucket full)
 **Lenient**: Accepts all requests if there's at least one slot available (can exceed limit).
 
 ```js
-const ratelimit = require('ioredis-ratelimit')({
+const ratelimiter = RateLimiter({
   client: new Redis(),
   key: 'limiter',
   limit: 5,
@@ -219,10 +225,10 @@ const ratelimit = require('ioredis-ratelimit')({
   mode: 'uniform'
 })
 
-await ratelimit(2)  // { total: 2, acknowledged: 2, remaining: 3 }
-await ratelimit(2)  // { total: 4, acknowledged: 2, remaining: 1 }
-await ratelimit(2)  // { total: 6, acknowledged: 2, remaining: 0 } ✅ Exceeds limit
-await ratelimit(2)  // Error: Too Many Requests (no slots available)
+await ratelimiter(2)  // { total: 2, acknowledged: 2, remaining: 3 }
+await ratelimiter(2)  // { total: 4, acknowledged: 2, remaining: 1 }
+await ratelimiter(2)  // { total: 6, acknowledged: 2, remaining: 0 } ✅ Exceeds limit
+await ratelimiter(2)  // Error: Too Many Requests (no slots available)
 ```
 
 **Use case**: Flexible rate limiting where occasional bursts are acceptable.

@@ -1,5 +1,5 @@
-const factory = require('../')
-const Redis = require('ioredis')
+import RateLimiter from '../index.js'
+import Redis from 'ioredis'
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -19,7 +19,7 @@ describe('ioredis-ratelimit', () => {
     const LIMIT = 10
     const KEY = 'ioredis-ratelimit:test:basic'
     const error = new Error('Limit error')
-    const limiter = factory({
+    const ratelimiter = RateLimiter({
       client,
       key: KEY,
       limit: LIMIT,
@@ -34,32 +34,32 @@ describe('ioredis-ratelimit', () => {
 
     it('should throw error when limit reached', async () => {
       for (let i = 1; i <= LIMIT; i++) {
-        const actual = await limiter()
+        const actual = await ratelimiter()
         expect(actual).toEqual({ total: i, acknowledged: 1, remaining: LIMIT - i })
       }
 
-      await expect(limiter()).rejects.toThrow(error)
+      await expect(ratelimiter()).rejects.toThrow(error)
       await expectAmount(client, KEY, LIMIT)
     })
 
     it('should get() return amount of actions being taken', async () => {
       for (let i = 1; i <= 3; i++) {
         if (i === 3) await delay(100)
-        const actual = await limiter()
+        const actual = await ratelimiter()
         expect(actual).toEqual({ total: i, acknowledged: 1, remaining: LIMIT - i })
       }
 
-      expect(await limiter.get()).toEqual({ total: 3, remaining: LIMIT - 3, retryAfterMS: 0 })
+      expect(await ratelimiter.get()).toEqual({ total: 3, remaining: LIMIT - 3, retryAfterMS: 0 })
 
-      const actual4 = await limiter()
+      const actual4 = await ratelimiter()
       expect(actual4).toEqual({ total: 4, acknowledged: 1, remaining: LIMIT - 4 })
-      expect(await limiter.get()).toEqual({ total: 4, remaining: LIMIT - 4, retryAfterMS: 0 })
+      expect(await ratelimiter.get()).toEqual({ total: 4, remaining: LIMIT - 4, retryAfterMS: 0 })
 
       for (let i = 5; i <= LIMIT; i++) {
-        await limiter()
+        await ratelimiter()
       }
 
-      const result = await limiter.get()
+      const result = await ratelimiter.get()
       expect(result.total).toBe(LIMIT)
       expect(result.remaining).toBe(0)
       expect(result.retryAfterMS).toBeGreaterThan(800)
@@ -69,7 +69,7 @@ describe('ioredis-ratelimit', () => {
       await client.del(KEY)
 
       for (let i = 1; i <= LIMIT; i++) {
-        const actual = await limiter()
+        const actual = await ratelimiter()
         expect(actual).toEqual({ total: i, acknowledged: 1, remaining: LIMIT - i })
       }
 
@@ -77,7 +77,7 @@ describe('ioredis-ratelimit', () => {
       await delay(1000)
 
       for (let i = 1; i <= LIMIT; i++) {
-        const actual = await limiter()
+        const actual = await ratelimiter()
         expect(actual).toEqual({ total: i, acknowledged: 1, remaining: LIMIT - i })
       }
 
@@ -90,7 +90,7 @@ describe('ioredis-ratelimit', () => {
 
     describe('binary mode', () => {
       const KEY = 'ioredis-ratelimit:test:binary'
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client,
         key: KEY,
         limit: LIMIT,
@@ -106,13 +106,13 @@ describe('ioredis-ratelimit', () => {
         const BATCH_SIZE = 3
         const iterations = Math.floor(LIMIT / BATCH_SIZE)
         for (let i = 1; i <= iterations; i++) {
-          const actual = await limiter(BATCH_SIZE)
+          const actual = await ratelimiter(BATCH_SIZE)
           expect(actual).toEqual({ total: i * BATCH_SIZE, acknowledged: BATCH_SIZE, remaining: LIMIT - i * BATCH_SIZE })
         }
 
         const total = iterations * BATCH_SIZE
         await expectAmount(client, KEY, total)
-        await expect(limiter(BATCH_SIZE)).rejects.toThrow()
+        await expect(ratelimiter(BATCH_SIZE)).rejects.toThrow()
         await expectAmount(client, KEY, total)
       })
 
@@ -120,20 +120,20 @@ describe('ioredis-ratelimit', () => {
         const BATCH_SIZE = 2
         const iterations = Math.floor(LIMIT / BATCH_SIZE)
         for (let i = 1; i <= iterations; i++) {
-          const actual = await limiter(BATCH_SIZE)
+          const actual = await ratelimiter(BATCH_SIZE)
           expect(actual).toEqual({ total: i * BATCH_SIZE, acknowledged: BATCH_SIZE, remaining: LIMIT - i * BATCH_SIZE })
         }
 
         const total = iterations * BATCH_SIZE
         await expectAmount(client, KEY, total)
-        await expect(limiter(BATCH_SIZE)).rejects.toThrow()
+        await expect(ratelimiter(BATCH_SIZE)).rejects.toThrow()
         await expectAmount(client, KEY, total)
       })
     })
 
     describe('nary mode', () => {
       const KEY = 'ioredis-ratelimit:test:nary'
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client,
         key: KEY,
         limit: LIMIT,
@@ -149,13 +149,13 @@ describe('ioredis-ratelimit', () => {
         const BATCH_SIZE = 3
         const iterations = Math.floor(LIMIT / BATCH_SIZE)
         for (let i = 1; i <= iterations; i++) {
-          const actual = await limiter(BATCH_SIZE)
+          const actual = await ratelimiter(BATCH_SIZE)
           expect(actual).toEqual({ total: i * BATCH_SIZE, acknowledged: BATCH_SIZE, remaining: LIMIT - i * BATCH_SIZE })
         }
 
         const total = iterations * BATCH_SIZE
         await expectAmount(client, KEY, iterations * BATCH_SIZE)
-        const actual = await limiter(BATCH_SIZE)
+        const actual = await ratelimiter(BATCH_SIZE)
         expect(actual).toEqual({ total: LIMIT, acknowledged: LIMIT - total, remaining: 0 })
         await expectAmount(client, KEY, LIMIT)
       })
@@ -164,16 +164,16 @@ describe('ioredis-ratelimit', () => {
         const BATCH_SIZE = 3
         const iterations = Math.ceil(LIMIT / BATCH_SIZE)
         for (let i = 1; i <= iterations; i++) {
-          await limiter(BATCH_SIZE)
+          await ratelimiter(BATCH_SIZE)
         }
 
-        await expect(limiter()).rejects.toThrow()
+        await expect(ratelimiter()).rejects.toThrow()
       })
     })
 
     describe('uniform mode', () => {
       const KEY = 'ioredis-ratelimit:test:uniform'
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client,
         key: KEY,
         limit: LIMIT,
@@ -189,13 +189,13 @@ describe('ioredis-ratelimit', () => {
         const BATCH_SIZE = 3
         const iterations = Math.floor(LIMIT / BATCH_SIZE)
         for (let i = 1; i <= iterations; i++) {
-          const actual = await limiter(BATCH_SIZE)
+          const actual = await ratelimiter(BATCH_SIZE)
           expect(actual).toEqual({ total: i * BATCH_SIZE, acknowledged: BATCH_SIZE, remaining: LIMIT - i * BATCH_SIZE })
         }
 
         let total = iterations * BATCH_SIZE
         await expectAmount(client, KEY, total)
-        const actual = await limiter(BATCH_SIZE)
+        const actual = await ratelimiter(BATCH_SIZE)
         expect(actual).toEqual({ total: total + BATCH_SIZE, acknowledged: BATCH_SIZE, remaining: 0 })
         total = total + BATCH_SIZE
         await expectAmount(client, KEY, total)
@@ -205,12 +205,12 @@ describe('ioredis-ratelimit', () => {
         const BATCH_SIZE = 3
         const iterations = Math.ceil(LIMIT / BATCH_SIZE)
         for (let i = 1; i <= iterations; i++) {
-          await limiter(BATCH_SIZE)
+          await ratelimiter(BATCH_SIZE)
         }
 
         const total = iterations * BATCH_SIZE
         await expectAmount(client, KEY, total)
-        await expect(limiter(BATCH_SIZE)).rejects.toThrow()
+        await expect(ratelimiter(BATCH_SIZE)).rejects.toThrow()
         await expectAmount(client, KEY, total)
       })
     })
@@ -218,7 +218,7 @@ describe('ioredis-ratelimit', () => {
 
   describe('key as function', () => {
     const LIMIT = 10
-    const limiter = factory({
+    const ratelimiter = RateLimiter({
       client,
       limit: LIMIT,
       duration: 3000,
@@ -228,7 +228,7 @@ describe('ioredis-ratelimit', () => {
 
     it('should create key with desired size', async () => {
       for (let i = 1; i <= 3; i++) {
-        const actual = await limiter({ id: 'foo' })
+        const actual = await ratelimiter({ id: 'foo' })
         expect(actual).toEqual({ total: i, acknowledged: 1, remaining: LIMIT - i })
       }
 
@@ -238,12 +238,12 @@ describe('ioredis-ratelimit', () => {
 
     it('should count different keys in different buckets', async () => {
       for (let i = 1; i <= LIMIT; i++) {
-        const actual = await limiter({ id: 'foo' })
+        const actual = await ratelimiter({ id: 'foo' })
         expect(actual).toEqual({ total: i, acknowledged: 1, remaining: LIMIT - i })
       }
 
       for (let i = 1; i <= LIMIT; i++) {
-        const actual = await limiter({ id: 'bar' })
+        const actual = await ratelimiter({ id: 'bar' })
         expect(actual).toEqual({ total: i, acknowledged: 1, remaining: LIMIT - i })
       }
 
@@ -254,11 +254,11 @@ describe('ioredis-ratelimit', () => {
       await client.del('ioredis-ratelimit:test:bar')
     })
 
-    it('should work with limiter.get', async () => {
-      await limiter({ id: 'test1' })
-      await limiter({ id: 'test1' })
+    it('should work with ratelimiter.get', async () => {
+      await ratelimiter({ id: 'test1' })
+      await ratelimiter({ id: 'test1' })
 
-      const result = await limiter.get({ id: 'test1' })
+      const result = await ratelimiter.get({ id: 'test1' })
       expect(result.total).toBe(2)
       expect(result.remaining).toBe(8)
 
@@ -276,7 +276,7 @@ describe('ioredis-ratelimit', () => {
 
     it('should not throw error with enough wait time', async () => {
       const KEY = 'ioredis-ratelimit:test:difference1'
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client,
         key: KEY,
         limit: LIMIT,
@@ -285,7 +285,7 @@ describe('ioredis-ratelimit', () => {
       })
 
       for (let i = 1; i <= 5; i++) {
-        const actual = await limiter()
+        const actual = await ratelimiter()
         expect(actual).toEqual({ total: i, acknowledged: 1, remaining: LIMIT - i })
         await delay(300)
       }
@@ -295,7 +295,7 @@ describe('ioredis-ratelimit', () => {
 
     it('should throw error without enough wait time', async () => {
       const KEY = 'ioredis-ratelimit:test:difference2'
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client,
         key: KEY,
         limit: LIMIT,
@@ -303,12 +303,12 @@ describe('ioredis-ratelimit', () => {
         difference: 300
       })
 
-      const actual = await limiter()
+      const actual = await ratelimiter()
       expect(actual).toEqual({ total: 1, acknowledged: 1, remaining: LIMIT - 1 })
 
-      await expect(limiter()).rejects.toThrow()
+      await expect(ratelimiter()).rejects.toThrow()
       await expectAmount(client, KEY, 1)
-      await expect(limiter()).rejects.toThrow()
+      await expect(ratelimiter()).rejects.toThrow()
       await expectAmount(client, KEY, 1)
 
       await client.del(KEY)
@@ -316,10 +316,10 @@ describe('ioredis-ratelimit', () => {
   })
 
   describe('error handling', () => {
-    it('should handle Redis errors in limiter', async () => {
+    it('should handle Redis errors in ratelimiter', async () => {
       const testClient = new Redis()
       const KEY = 'ioredis-ratelimit:test:error'
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client: testClient,
         key: KEY,
         limit: 10,
@@ -340,14 +340,14 @@ describe('ioredis-ratelimit', () => {
         return multi
       }
 
-      await expect(limiter()).rejects.toThrow('Redis error')
+      await expect(ratelimiter()).rejects.toThrow('Redis error')
       await testClient.quit()
     })
 
-    it('should handle Redis errors in limiter.get', async () => {
+    it('should handle Redis errors in ratelimiter.get', async () => {
       const testClient = new Redis()
       const KEY = 'ioredis-ratelimit:test:error-get'
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client: testClient,
         key: KEY,
         limit: 10,
@@ -366,7 +366,7 @@ describe('ioredis-ratelimit', () => {
         return multi
       }
 
-      await expect(limiter.get()).rejects.toThrow('Redis get error')
+      await expect(ratelimiter.get()).rejects.toThrow('Redis get error')
       await testClient.quit()
     })
 
@@ -374,7 +374,7 @@ describe('ioredis-ratelimit', () => {
       const KEY = 'ioredis-ratelimit:test:error-status'
       const customError = new Error('Custom error')
 
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client,
         key: KEY,
         limit: 1,
@@ -382,10 +382,10 @@ describe('ioredis-ratelimit', () => {
         error: customError
       })
 
-      await limiter()
+      await ratelimiter()
 
       try {
-        await limiter()
+        await ratelimiter()
       } catch (err) {
         expect(err).toBe(customError)
         expect(err.status).toBe(429)
@@ -401,7 +401,7 @@ describe('ioredis-ratelimit', () => {
       customError.status = 503
       customError.statusCode = 503
 
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client,
         key: KEY,
         limit: 1,
@@ -409,10 +409,10 @@ describe('ioredis-ratelimit', () => {
         error: customError
       })
 
-      await limiter()
+      await ratelimiter()
 
       try {
-        await limiter()
+        await ratelimiter()
       } catch (err) {
         expect(err).toBe(customError)
         expect(err.status).toBe(503)
@@ -427,31 +427,31 @@ describe('ioredis-ratelimit', () => {
     it('should use default values', async () => {
       const KEY = 'ioredis-ratelimit:test:defaults'
 
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client,
         key: KEY,
         limit: 1,
         duration: 1000
       })
 
-      const result = await limiter()
+      const result = await ratelimiter()
       expect(result.total).toBe(1)
       expect(result.acknowledged).toBe(1)
       expect(result.remaining).toBe(0)
 
-      await expect(limiter()).rejects.toThrow('Too Many Requests')
+      await expect(ratelimiter()).rejects.toThrow('Too Many Requests')
       await client.del(KEY)
     })
 
     it('should require client and key', async () => {
-      expect(() => factory()).toThrow('.client required')
-      expect(() => factory({ client })).toThrow('.key required')
+      expect(() => RateLimiter()).toThrow('.client required')
+      expect(() => RateLimiter({ client })).toThrow('.key required')
     })
 
     it('should handle custom ttl', async () => {
       const KEY = 'ioredis-ratelimit:test:custom-ttl'
 
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client,
         key: KEY,
         limit: 5,
@@ -459,7 +459,7 @@ describe('ioredis-ratelimit', () => {
         ttl: 5000
       })
 
-      await limiter()
+      await ratelimiter()
 
       const ttl = await client.pttl(KEY)
       expect(ttl).toBeGreaterThan(4000)
@@ -471,14 +471,14 @@ describe('ioredis-ratelimit', () => {
     it('should use duration as default ttl', async () => {
       const KEY = 'ioredis-ratelimit:test:ttl-default'
 
-      const limiter = factory({
+      const ratelimiter = RateLimiter({
         client,
         key: KEY,
         limit: 5,
         duration: 1000
       })
 
-      await limiter()
+      await ratelimiter()
 
       const ttl = await client.pttl(KEY)
       expect(ttl).toBeGreaterThan(0)

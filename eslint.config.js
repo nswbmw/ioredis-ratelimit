@@ -1,7 +1,7 @@
-const globals = require('globals')
-const neostandard = require('neostandard')
+import globals from 'globals'
+import neostandard from 'neostandard'
 
-module.exports = [
+export default [
   ...neostandard({
     ignores: ['dist/**', 'node_modules/**', 'coverage/**']
   }),

@@ -1,5 +1,3 @@
-const assert = require('assert')
-
 /**
  * @typedef {'binary' | 'nary' | 'uniform'} RateLimitMode
  */
@@ -38,7 +36,7 @@ const assert = require('assert')
  * When `key` is a function, call as `(id: string, times?: number)`.
  * The returned function also exposes `fn.get(id?: string): Promise<RateLimitStatus>`.
  */
-module.exports = function (opts = {}) {
+export default function RateLimiter (opts = {}) {
   const client = opts.client
   const key = opts.key
   const limit = opts.limit
@@ -101,7 +99,7 @@ module.exports = function (opts = {}) {
    * @param {number} [times=1] - Number of requests to consume
    * @returns {Promise<RateLimitResult>} Promise resolving to rate limit result
    */
-  function limiter () {
+  function ratelimiter () {
     const redisKey = typeof key === 'string' ? key : key(arguments[0])
     const times = (typeof key === 'string' ? arguments[0] : arguments[1]) || 1
 
@@ -160,7 +158,7 @@ module.exports = function (opts = {}) {
    * @param {any} [id] - Identifier when key is a function
    * @returns {Promise<RateLimitStatus>} Promise resolving to rate limit status
    */
-  limiter.get = function () {
+  ratelimiter.get = function () {
     const redisKey = typeof key === 'string' ? key : key(arguments[0])
 
     assert(typeof redisKey === 'string', 'key should be a string or a function that returns string')
@@ -193,5 +191,9 @@ module.exports = function (opts = {}) {
       })
   }
 
-  return limiter
+  return ratelimiter
+}
+
+function assert (condition, message) {
+  if (!condition) throw new TypeError(message)
 }

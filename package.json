@@ -1,27 +1,31 @@
 {
   "name": "ioredis-ratelimit",
   "description": "A generic Redis-backed rate limiting tool built on top of ioredis.",
-  "version": "3.0.0",
-  "main": "index.js",
+  "version": "3.1.0",
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
   "types": "types/index.d.ts",
   "exports": {
     ".": {
-      "require": "./index.js",
-      "import": "./index.js",
-      "default": "./index.js"
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
     }
   },
   "files": [
-    "index.js",
+    "dist",
     "types",
     "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "pretest": "redis-cli ping > /dev/null 2>&1 || (echo 'Error: Redis is not running. Please start Redis first.' && exit 1)",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "prepublishOnly": "npm run lint && npm run test",
+    "build": "tsup",
+    "prepublishOnly": "npm run lint && npm run test && npm run build",
     "prepare": "husky"
   },
   "author": "nswbmw",
@@ -43,7 +47,8 @@
     "husky": "9.1.7",
     "ioredis": "5.8.2",
     "jest": "30.2.0",
-    "neostandard": "0.12.2"
+    "neostandard": "0.12.2",
+    "tsup": "8.5.1"
   },
   "peerDependencies": {
     "ioredis": "^5.8.2"
