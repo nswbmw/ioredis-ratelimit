@@ -1,13 +1,14 @@
 {
   "name": "ioredis-ratelimit",
   "description": "A generic Redis-backed rate limiting tool built on top of ioredis.",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "types/index.d.ts",
   "exports": {
     ".": {
+      "types": "./types/index.d.ts",
       "require": "./dist/cjs/index.js",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
