@@ -165,13 +165,12 @@ export default function RateLimiter (opts = {}) {
 
     const max = Date.now()
     const min = max - duration
-    const lastAvailableIndex = Math.max(0, limit - 2)
 
     return client
       .multi()
       .zremrangebyscore(redisKey, '-inf', `(${min}`) // remove expired ones
       .zcount(redisKey, min, max)
-      .zrevrange(redisKey, lastAvailableIndex, lastAvailableIndex, 'WITHSCORES')
+      .zrange(redisKey, 0, 0, 'WITHSCORES') // oldest item (lowest score)
       .exec()
       .then(res => {
         // Check for Redis errors

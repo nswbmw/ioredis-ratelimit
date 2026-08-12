@@ -65,6 +65,37 @@ describe('ioredis-ratelimit', () => {
       expect(result.retryAfterMS).toBeGreaterThan(800)
     })
 
+    it('should calculate retryAfterMS based on oldest item', async () => {
+      const KEY2 = 'ioredis-ratelimit:test:retryafter-oldest'
+      const DURATION = 2000
+      const ratelimiter2 = RateLimiter({
+        client,
+        key: KEY2,
+        limit: 3,
+        duration: DURATION,
+        mode: 'binary'
+      })
+
+      await client.del(KEY2)
+      // First request at T0
+      await ratelimiter2()
+      // Wait 500ms so the oldest item is significantly older than the rest
+      await delay(500)
+      // Fill remaining capacity at T~500
+      await ratelimiter2()
+      await ratelimiter2()
+
+      const status = await ratelimiter2.get()
+      expect(status.total).toBe(3)
+      expect(status.remaining).toBe(0)
+      // retryAfterMS should be based on the oldest item (T0), not the
+      // second-oldest (T~500). So it should be ~1500ms, not ~2000ms.
+      expect(status.retryAfterMS).toBeGreaterThan(1300)
+      expect(status.retryAfterMS).toBeLessThan(1700)
+
+      await client.del(KEY2)
+    })
+
     it('should restore capacity after duration expires', async () => {
       await client.del(KEY)
 
@@ -74,7 +105,9 @@ describe('ioredis-ratelimit', () => {
       }
 
       await expectAmount(client, KEY, LIMIT)
-      await delay(1000)
+      // Wait longer than duration to ensure all entries from the first loop
+      // (which itself takes time across sequential Redis calls) have expired.
+      await delay(1200)
 
       for (let i = 1; i <= LIMIT; i++) {
         const actual = await ratelimiter()
@@ -287,7 +320,9 @@ describe('ioredis-ratelimit', () => {
       for (let i = 1; i <= 5; i++) {
         const actual = await ratelimiter()
         expect(actual).toEqual({ total: i, acknowledged: 1, remaining: LIMIT - i })
-        await delay(300)
+        // Wait slightly longer than `difference` so the previous request
+        // reliably falls outside the difference window.
+        await delay(350)
       }
 
       await client.del(KEY)

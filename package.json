@@ -1,7 +1,7 @@
 {
   "name": "ioredis-ratelimit",
   "description": "A generic Redis-backed rate limiting tool built on top of ioredis.",
-  "version": "3.1.1",
+  "version": "3.2.0",
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -41,17 +41,17 @@
     "redis"
   ],
   "devDependencies": {
-    "@commitlint/cli": "20.1.0",
-    "@commitlint/config-conventional": "20.0.0",
-    "eslint": "9.39.1",
-    "globals": "16.5.0",
+    "@commitlint/cli": "21.2.1",
+    "@commitlint/config-conventional": "21.2.0",
+    "eslint": "9.39.4",
+    "globals": "17.10.0",
     "husky": "9.1.7",
-    "ioredis": "5.8.2",
-    "jest": "30.2.0",
-    "neostandard": "0.12.2",
+    "ioredis": "6.0.0",
+    "jest": "30.4.2",
+    "neostandard": "0.13.0",
     "tsup": "8.5.1"
   },
   "peerDependencies": {
-    "ioredis": "^5.8.2"
+    "ioredis": "^6.0.0"
   }
 }

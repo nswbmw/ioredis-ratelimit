@@ -1,3 +1,8 @@
+## v3.2.0 / 2026-08-12
+
+- fix: correct `retryAfterMS` calculation in `ratelimiter.get()` to use the oldest item in the bucket instead of the second-oldest one
+- chore: update dependencies
+
 ## v3.1.1 / 2025-11-24
 
 - fix: exports types in package.json
